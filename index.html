@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QUAN X Network | Quantum Blockchain Infrastructure</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/_sdk/element_sdk.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Inter:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
     <style>
         body { box-sizing: border-box; }
         :root { --font-serif: 'Cormorant Garamond', Georgia, serif; --font-sans: 'Inter', -apple-system, sans-serif; }
@@ -88,12 +89,53 @@
             filter: drop-shadow(0 0 5px rgba(0, 136, 204, 0.5));
         }
         
-        /* تحسينات إضافية */
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            z-index: 1000;
+            padding: 15px 25px;
+            border-radius: 8px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform: translateX(400px);
+            transition: transform 0.4s ease;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        .notification.success {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        .notification.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        .notification.info {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+        
+        /* Subscription Form */
+        .subscribe-form {
+            transition: all 0.3s ease;
+        }
+        .subscribe-form.success input {
+            background: rgba(34, 197, 94, 0.05) !important;
+            border-color: rgba(34, 197, 94, 0.2) !important;
+        }
+        
+        /* Additional improvements */
         .nav-link-spacing { letter-spacing: 0.4em; }
         .button-spacing { letter-spacing: 0.3em; }
         .hero-spacing { letter-spacing: 0.4em; }
         
-        /* تحسين مظهر الإدخال */
+        /* Improved input appearance */
         input, textarea {
             transition: all 0.3s ease;
             background: rgba(255, 255, 255, 0.03) !important;
@@ -108,23 +150,12 @@
         input::placeholder, textarea::placeholder {
             color: rgba(255, 255, 255, 0.3) !important;
         }
-        
-        /* تحسين التمرير */
-        textarea::-webkit-scrollbar {
-            width: 6px;
-        }
-        textarea::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        textarea::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-        }
     </style>
-    <style>@view-transition { navigation: auto; }</style>
-    <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
 </head>
 <body class="h-full">
+    <!-- Notifications -->
+    <div id="notification" class="notification hidden"></div>
+
     <div id="app-wrapper" class="w-full h-full overflow-auto bg-black">
         <!-- Navigation -->
         <nav class="fixed top-0 left-0 right-0 z-50 glass-panel">
@@ -155,14 +186,8 @@
         
         <!-- Hero Section -->
         <section class="relative h-screen min-h-[800px] flex items-center overflow-hidden">
-            <!-- Background Image Layer -->
             <div class="absolute inset-0 z-0">
-                <!-- الصورة الأصلية -->
-                <img src="https://i.ibb.co/BHkjKVMF/Chat-GPT-Image-27-janv-2026-21-28-13.png" 
-                     class="w-full h-full object-cover object-[75%_20%] md:object-right-top" 
-                     alt="Quan X Background">
-                
-                <!-- تدرج لوني أسود لضمان وضوح النص على اليسار -->
+                <!-- Image Removed as requested -->
                 <div class="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent"></div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
             </div>
@@ -188,7 +213,7 @@
                     </div>
                     
                     <h1 id="hero-title" class="reveal active reveal-delay-2 font-serif text-5xl md:text-7xl lg:text-8xl font-light tracking-wide mb-8 glow-text leading-tight">
-                        Where i Wealth<br>
+                        Where Wealth<br>
                         Meets Intelligence
                     </h1>
                     
@@ -201,6 +226,25 @@
                     <div class="reveal active reveal-delay-5 flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-6">
                         <button id="cta-hero" class="btn-premium px-12 py-4 bg-white text-black button-spacing text-xs font-medium"> ENTER THE FUTURE </button>
                         <button class="btn-premium px-12 py-4 border border-white/20 button-spacing text-xs text-white hover:border-white/40"> EXPLORE PROTOCOL </button>
+                    </div>
+
+                    <!-- Simplified subscription form in hero -->
+                    <div class="reveal active reveal-delay-6 mt-16 max-w-md">
+                        <div class="glass-panel p-6">
+                            <p class="text-sm text-white/60 mb-4">Join our exclusive waitlist for early access</p>
+                            <div id="subscribe-container" class="subscribe-form">
+                                <div class="flex gap-2">
+                                    <input type="email" 
+                                           id="waitlist-email" 
+                                           placeholder="Your email address"
+                                           class="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all">
+                                    <button onclick="subscribeToWaitlist()" class="px-6 py-3 bg-white/10 border border-white/10 hover:bg-white/20 transition-colors">
+                                        Join
+                                    </button>
+                                </div>
+                                <div id="subscribe-message" class="mt-2 text-xs hidden"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -253,7 +297,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Decorative elements -->
                         <div class="absolute -top-4 -right-4 w-24 h-24 border border-white/5"></div>
                         <div class="absolute -bottom-4 -left-4 w-16 h-16 border border-white/5"></div>
                     </div>
@@ -408,7 +451,6 @@
                         </div>
                     </div>
                     <div class="reveal reveal-delay-2 relative">
-                        <!-- Token visualization -->
                         <div class="glass-panel p-12 glow-subtle relative overflow-hidden">
                             <div class="absolute inset-0 opacity-10">
                                 <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
@@ -434,7 +476,7 @@
                             <div class="space-y-4">
                                 <div class="flex justify-between items-center py-3 border-b border-white/5">
                                     <span class="text-white/50 text-sm">Total Supply</span>
-                                    <span class="font-serif text-lg">100,000,000</span>
+                                    <span class="font-serif text-lg">1,000,000,000</span>
                                 </div>
                                 <div class="flex justify-between items-center py-3 border-b border-white/5">
                                     <span class="text-white/50 text-sm">Initial Circulation</span>
@@ -464,7 +506,6 @@
                     <p class="text-white/40 max-w-2xl mx-auto font-light">A strategic evolution toward becoming the world's premier decentralized infrastructure</p>
                 </div>
                 <div class="relative">
-                    <!-- Timeline -->
                     <div class="hidden lg:block roadmap-line"></div>
                     <div class="space-y-12 lg:space-y-24">
                         <!-- Phase 1 -->
@@ -627,6 +668,7 @@
                         <h3 class="font-serif text-xl mb-4">Architect</h3>
                         <p class="text-white/40 text-sm font-light mb-6">Priority whitelist access, governance participation, and exclusive airdrops</p>
                         <p class="text-xs tracking-widest text-white/60">WAITLIST OPEN</p>
+                        <button onclick="openWaitlistForm()" class="mt-6 w-full px-4 py-2 border border-white/20 hover:bg-white/10 transition-colors">Join Waitlist</button>
                     </div>
                     <div class="reveal reveal-delay-3 glass-panel p-10 text-center">
                         <div class="w-16 h-16 mx-auto mb-6 border border-white/10 flex items-center justify-center">
@@ -635,6 +677,35 @@
                         <h3 class="font-serif text-xl mb-4">Sovereign</h3>
                         <p class="text-white/40 text-sm font-light mb-6">Direct team access, strategic allocation, and founding member status</p>
                         <p class="text-xs tracking-widest text-white/30">INVITATION ONLY</p>
+                    </div>
+                </div>
+
+                <!-- Waitlist Form Modal -->
+                <div id="waitlist-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+                    <div class="glass-panel p-8 max-w-md w-full">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-serif text-2xl">Join Architect Tier</h3>
+                            <button onclick="closeWaitlistForm()" class="text-white/60 hover:text-white">✕</button>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-white/60 mb-2">Email Address</label>
+                                <input type="email" 
+                                       id="waitlist-modal-email" 
+                                       class="w-full px-4 py-3 bg-white/5 border border-white/10 text-white"
+                                       placeholder="your@email.com">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-white/60 mb-2">Full Name</label>
+                                <input type="text" 
+                                       id="waitlist-modal-name" 
+                                       class="w-full px-4 py-3 bg-white/5 border border-white/10 text-white"
+                                       placeholder="John Doe">
+                            </div>
+                            <button onclick="submitWaitlist()" class="w-full px-6 py-3 bg-white text-black hover:bg-white/90 transition-colors">
+                                Submit Application
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -651,11 +722,9 @@
                 </div>
 
                 <div class="reveal reveal-delay-2 glass-panel p-10 lg:p-12">
-                    <!-- رسالة النجاح/الخطأ -->
                     <div id="telegram-response" class="hidden mb-6 p-4 rounded-lg text-sm"></div>
                     
                     <form id="telegram-form" class="space-y-8">
-                        <!-- اسم المستخدم -->
                         <div>
                             <label class="block text-xs tracking-[0.3em] text-white/60 mb-3">YOUR NAME</label>
                             <input type="text" 
@@ -666,7 +735,6 @@
                                    required>
                         </div>
 
-                        <!-- البريد الإلكتروني -->
                         <div>
                             <label class="block text-xs tracking-[0.3em] text-white/60 mb-3">EMAIL ADDRESS</label>
                             <input type="email" 
@@ -677,7 +745,6 @@
                                    required>
                         </div>
 
-                        <!-- الرسالة -->
                         <div>
                             <label class="block text-xs tracking-[0.3em] text-white/60 mb-3">MESSAGE</label>
                             <textarea id="user-message" 
@@ -688,7 +755,6 @@
                                       required></textarea>
                         </div>
 
-                        <!-- زر الإرسال -->
                         <div class="pt-6">
                             <button type="submit" 
                                     id="send-telegram-btn"
@@ -707,7 +773,6 @@
                                 </span>
                             </button>
                             
-                            <!-- رمز التلغرام -->
                             <div class="text-center mt-8">
                                 <div class="inline-flex items-center space-x-3 text-white/40 text-sm">
                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -720,7 +785,6 @@
                     </form>
                 </div>
 
-                <!-- معلومات إضافية -->
                 <div class="reveal reveal-delay-4 mt-12 text-center">
                     <div class="glass-panel inline-block px-8 py-4">
                         <p class="text-white/40 text-sm">
@@ -806,83 +870,199 @@
     </div>
 
     <script>
-        // Default configuration
-        const defaultConfig = {
-            hero_title: 'Where Wealth<br/>Meets Intelligence',
-            hero_subtitle: 'The convergence of artificial intelligence, blockchain sovereignty, and institutional-grade infrastructure. Built for the architects of tomorrow.',
-            vision_title: 'The Elite Future<br/>of Digital Assets',
-            cta_button_text: 'ENTER THE FUTURE'
-        };
+        // ============================================
+        // NOTIFICATION SYSTEM
+        // ============================================
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification ' + type;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000);
+        }
 
-        let config = { ...defaultConfig };
-
-        // Telegram Bot Configuration - ✅ تم التحديث!
-        const TELEGRAM_CONFIG = {
-            botToken: '8350416732:AAHSToiPp-D8ZHxgMQD75LtkVdQeqoPVCxA',
-            chatId: 6796377271 // ✅ تم التحديث إلى الرقم الصحيح!
-        };
-
-        // دالة إرسال الرسالة إلى تلغرام (مُحسنة)
+        // ============================================
+        // TELEGRAM MESSAGE SYSTEM
+        // ============================================
         async function sendToTelegram(messageData) {
-            console.log('📤 محاولة إرسال إلى تلغرام...');
-            console.log('📋 البيانات:', messageData);
+            const TELEGRAM_BOT_TOKEN = '8350416732:AAHSToiPp-D8ZHxgMQD75LtkVdQeqoPVCxA';
+            const TELEGRAM_CHAT_ID = '6796377271';
             
-            const url = `https://api.telegram.org/bot${TELEGRAM_CONFIG.botToken}/sendMessage`;
+            const text = `📨 New message from QUAN X website\n\n` +
+                         `👤 Name: ${messageData.name}\n` +
+                         `📧 Email: ${messageData.email}\n` +
+                         `📝 Message: ${messageData.message}\n\n` +
+                         `🕒 Time: ${new Date().toLocaleString('en-US')}`;
+
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
             
-            // تنسيق الرسالة
-            const text = `📨 رسالة جديدة من موقع QUAN X\n\n` +
-                         `👤 الاسم: ${messageData.name}\n` +
-                         `📧 البريد: ${messageData.email}\n` +
-                         `📝 الرسالة: ${messageData.message}\n\n` +
-                         `🕒 الوقت: ${new Date().toLocaleString('ar-SA')}`;
-
-            const payload = {
-                chat_id: TELEGRAM_CONFIG.chatId,
-                text: text,
-                parse_mode: 'HTML'
-            };
-
-            console.log('🔗 الرابط:', url);
-            console.log('📤 الحمولة:', payload);
-
             try {
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM_CHAT_ID,
+                        text: text,
+                        parse_mode: 'HTML'
+                    })
                 });
 
                 const result = await response.json();
-                console.log('📥 رد التلغرام:', result);
                 
                 if (result.ok) {
-                    console.log('✅ نجاح: الرسالة وصلت!');
+                    // Save data to localStorage as temporary alternative
+                    saveMessageToLocalStorage(messageData);
+                    
                     return { 
                         success: true, 
                         data: result,
-                        message: 'تم إرسال الرسالة بنجاح'
+                        message: 'Message sent successfully'
                     };
                 } else {
-                    console.log('❌ فشل:', result.description);
                     return { 
                         success: false, 
-                        error: result.description || 'فشل غير معروف',
-                        data: result
+                        error: result.description || 'Failed to send message'
                     };
                 }
             } catch (error) {
-                console.error('🚨 خطأ في الإتصال:', error);
+                console.error('🚨 Error sending message:', error);
                 return { 
                     success: false, 
-                    error: error.message,
-                    stack: error.stack 
+                    error: 'Failed to connect to Telegram'
                 };
             }
         }
 
-        // إعداد نموذج التلغرام
+        // Save messages to localStorage (temporary alternative)
+        function saveMessageToLocalStorage(messageData) {
+            try {
+                const messages = JSON.parse(localStorage.getItem('quanx_messages') || '[]');
+                messages.push({
+                    ...messageData,
+                    timestamp: new Date().toISOString(),
+                    id: Date.now()
+                });
+                localStorage.setItem('quanx_messages', JSON.stringify(messages));
+                console.log('✅ Message saved to localStorage');
+            } catch (error) {
+                console.error('Error saving to localStorage:', error);
+            }
+        }
+
+        // Save subscribers to localStorage
+        function saveSubscriberToLocalStorage(email, name = '', tier = 'observer') {
+            try {
+                const subscribers = JSON.parse(localStorage.getItem('quanx_subscribers') || '[]');
+                
+                // Check for duplicates
+                if (subscribers.some(sub => sub.email === email)) {
+                    return false;
+                }
+                
+                subscribers.push({
+                    email,
+                    name,
+                    tier,
+                    timestamp: new Date().toISOString(),
+                    id: Date.now()
+                });
+                
+                localStorage.setItem('quanx_subscribers', JSON.stringify(subscribers));
+                console.log('✅ Subscriber saved to localStorage');
+                return true;
+            } catch (error) {
+                console.error('Error saving subscriber:', error);
+                return false;
+            }
+        }
+
+        // ============================================
+        // WAITLIST SYSTEM
+        // ============================================
+        function subscribeToWaitlist() {
+            const emailInput = document.getElementById('waitlist-email');
+            const email = emailInput.value.trim();
+            const messageDiv = document.getElementById('subscribe-message');
+            
+            if (!email || !isValidEmail(email)) {
+                showNotification('Please enter a valid email address', 'error');
+                return;
+            }
+            
+            if (saveSubscriberToLocalStorage(email, '', 'observer')) {
+                showNotification('Successfully added to waitlist!', 'success');
+                emailInput.value = '';
+                messageDiv.textContent = '✅ You have been added to the waitlist!';
+                messageDiv.className = 'mt-2 text-xs text-green-400';
+                messageDiv.classList.remove('hidden');
+                
+                // Add success effect
+                const container = document.getElementById('subscribe-container');
+                container.classList.add('success');
+                
+                setTimeout(() => {
+                    messageDiv.classList.add('hidden');
+                    container.classList.remove('success');
+                }, 5000);
+            } else {
+                showNotification('You are already subscribed!', 'info');
+            }
+        }
+
+        function submitWaitlist() {
+            const email = document.getElementById('waitlist-modal-email').value.trim();
+            const name = document.getElementById('waitlist-modal-name').value.trim();
+            
+            if (!email || !isValidEmail(email)) {
+                showNotification('Please enter a valid email address', 'error');
+                return;
+            }
+            
+            if (!name) {
+                showNotification('Please enter your name', 'error');
+                return;
+            }
+            
+            if (saveSubscriberToLocalStorage(email, name, 'architect')) {
+                showNotification('✅ Application submitted successfully!', 'success');
+                
+                // Send notification to Telegram
+                sendToTelegram({
+                    name: name,
+                    email: email,
+                    message: `New waitlist application for Architect tier`
+                });
+                
+                closeWaitlistForm();
+            } else {
+                showNotification('You are already on the waitlist!', 'info');
+            }
+        }
+
+        function openWaitlistForm() {
+            document.getElementById('waitlist-modal').classList.remove('hidden');
+        }
+
+        function closeWaitlistForm() {
+            document.getElementById('waitlist-modal').classList.add('hidden');
+        }
+
+        // ============================================
+        // HELPER FUNCTIONS
+        // ============================================
+        function isValidEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        // ============================================
+        // FORM HANDLERS
+        // ============================================
         function initTelegramForm() {
             const form = document.getElementById('telegram-form');
             const responseDiv = document.getElementById('telegram-response');
@@ -895,68 +1075,44 @@
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
-                // التحقق من التكوين
-                if (!TELEGRAM_CONFIG.botToken || !TELEGRAM_CONFIG.chatId) {
-                    showResponse('Please configure Telegram bot token and chat ID first.', 'error');
-                    return;
-                }
-
-                // جمع البيانات
                 const formData = {
                     name: document.getElementById('user-name').value.trim(),
                     email: document.getElementById('user-email').value.trim(),
                     message: document.getElementById('user-message').value.trim()
                 };
 
-                // التحقق من البيانات
                 if (!formData.name || !formData.email || !formData.message) {
-                    showResponse('Please fill in all fields.', 'error');
+                    showNotification('Please fill in all fields', 'error');
                     return;
                 }
 
-                // إظهار حالة التحميل
+                if (!isValidEmail(formData.email)) {
+                    showNotification('Please enter a valid email address', 'error');
+                    return;
+                }
+
                 sendBtn.disabled = true;
                 btnText.classList.add('hidden');
                 btnLoader.classList.remove('hidden');
 
-                // إرسال البيانات
                 const result = await sendToTelegram(formData);
 
-                // إعادة تعيين الزر
                 sendBtn.disabled = false;
                 btnText.classList.remove('hidden');
                 btnLoader.classList.add('hidden');
 
-                // إظهار النتيجة
                 if (result.success) {
-                    showResponse('✅ Message sent successfully to Telegram bot!', 'success');
-                    form.reset(); // مسح النموذج
+                    showNotification('✅ Message sent successfully!', 'success');
+                    form.reset();
                 } else {
-                    showResponse('❌ Failed to send message. Please try again.', 'error');
+                    showNotification('❌ Failed to send message', 'error');
                 }
             });
-
-            // دالة إظهار الرسالة
-            function showResponse(message, type) {
-                responseDiv.textContent = message;
-                responseDiv.className = 'mb-6 p-4 rounded-lg text-sm ';
-                
-                if (type === 'success') {
-                    responseDiv.classList.add('bg-green-500/10', 'border', 'border-green-500/20', 'text-green-400');
-                } else {
-                    responseDiv.classList.add('bg-red-500/10', 'border', 'border-red-500/20', 'text-red-400');
-                }
-                
-                responseDiv.classList.remove('hidden');
-                
-                // إخفاء الرسالة بعد 5 ثواني
-                setTimeout(() => {
-                    responseDiv.classList.add('hidden');
-                }, 5000);
-            }
         }
 
-        // Scroll reveal animation
+        // ============================================
+        // ANIMATIONS AND UI
+        // ============================================
         function initScrollReveal() {
             const reveals = document.querySelectorAll('.reveal');
             
@@ -974,7 +1130,6 @@
             reveals.forEach(reveal => observer.observe(reveal));
         }
 
-        // Smooth scroll for navigation
         function initSmoothScroll() {
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 anchor.addEventListener('click', function(e) {
@@ -990,98 +1145,48 @@
             });
         }
 
-        // Parallax effect for hero
         function initParallax() {
             const hero = document.querySelector('.blockchain-pattern');
             const wrapper = document.getElementById('app-wrapper');
             
-            wrapper.addEventListener('scroll', () => {
-                const scrolled = wrapper.scrollTop;
-                if (hero) {
+            if (wrapper && hero) {
+                wrapper.addEventListener('scroll', () => {
+                    const scrolled = wrapper.scrollTop;
                     hero.style.transform = `translateY(${scrolled * 0.3}px)`;
-                }
-            });
-        }
-
-        // Update UI based on config
-        async function onConfigChange(newConfig) {
-            const heroTitle = document.getElementById('hero-title');
-            const heroSubtitle = document.getElementById('hero-subtitle');
-            const visionTitle = document.getElementById('vision-title');
-            const ctaHero = document.getElementById('cta-hero');
-            const ctaFinal = document.getElementById('cta-final');
-
-            if (heroTitle) {
-                heroTitle.innerHTML = newConfig.hero_title || defaultConfig.hero_title;
-            }
-            if (heroSubtitle) {
-                heroSubtitle.textContent = newConfig.hero_subtitle || defaultConfig.hero_subtitle;
-            }
-            if (visionTitle) {
-                visionTitle.innerHTML = newConfig.vision_title || defaultConfig.vision_title;
-            }
-            if (ctaHero) {
-                ctaHero.textContent = newConfig.cta_button_text || defaultConfig.cta_button_text;
-            }
-            if (ctaFinal) {
-                ctaFinal.textContent = newConfig.cta_button_text || defaultConfig.cta_button_text;
-            }
-        }
-
-        // Map config to capabilities
-        function mapToCapabilities(cfg) {
-            return {
-                recolorables: [],
-                borderables: [],
-                fontEditable: undefined,
-                fontSizeable: undefined
-            };
-        }
-
-        // Map config to edit panel values
-        function mapToEditPanelValues(cfg) {
-            return new Map([
-                ['hero_title', (cfg.hero_title || defaultConfig.hero_title).replace(/<br\s*\/?>/gi, ' ')],
-                ['hero_subtitle', cfg.hero_subtitle || defaultConfig.hero_subtitle],
-                ['vision_title', (cfg.vision_title || defaultConfig.vision_title).replace(/<br\s*\/?>/gi, ' ')],
-                ['cta_button_text', cfg.cta_button_text || defaultConfig.cta_button_text]
-            ]);
-        }
-
-        // Initialize SDK and app
-        async function init() {
-            if (window.elementSdk) {
-                await window.elementSdk.init({
-                    defaultConfig,
-                    onConfigChange,
-                    mapToCapabilities,
-                    mapToEditPanelValues
                 });
-                config = window.elementSdk.config || defaultConfig;
             }
+        }
 
-            await onConfigChange(config);
+        // ============================================
+        // INITIALIZE EVERYTHING
+        // ============================================
+        function init() {
             initScrollReveal();
             initSmoothScroll();
             initParallax();
             initTelegramForm();
             
-            // إضافة event listeners للأزرار الأخرى
+            // Add event listeners for buttons
             document.getElementById('cta-hero')?.addEventListener('click', function() {
-                alert('Entering the future...');
+                showNotification('Welcome to the future of blockchain!', 'info');
             });
             
             document.getElementById('cta-nav')?.addEventListener('click', function() {
-                alert('Enter button clicked');
+                showNotification('Entering the QUAN X ecosystem...', 'info');
             });
             
             document.getElementById('cta-final')?.addEventListener('click', function() {
-                alert('Final CTA button clicked');
+                showNotification('Access granted to future technologies', 'success');
             });
+
+            // Display number of stored messages (for testing)
+            const messages = JSON.parse(localStorage.getItem('quanx_messages') || '[]');
+            const subscribers = JSON.parse(localStorage.getItem('quanx_subscribers') || '[]');
+            console.log(`📊 Stats: ${messages.length} messages, ${subscribers.length} subscribers`);
         }
 
-        init();
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
-
